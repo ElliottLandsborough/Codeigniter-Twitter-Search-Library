@@ -86,4 +86,5 @@ CREATE TABLE IF NOT EXISTS `tweets` (
 */
 $config['user'] = 'twitter-username';
 $config['pass'] = 'twitter-password';
+?>
 ```
