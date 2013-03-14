@@ -15,18 +15,18 @@ It is possible to run search() within the site but its a good idea to use its ca
 Search() is designed to be run with cron or directly on the site.
 Stream() is best run with something like nohup as it is an endless loop.
 ### Example commands
+search for tweets containing keywords set in mysql table search_terms:
 ```bash
 php /path/to/codeigniter/index.php findtweets search
 ```
-search for tweets containing keywords set in mysql table search_terms
+same as first example but cache results for 5 minutes before trying again:
 ```bash
 php /path/to/index.php findtweets search 5
 ```
-same as first example but cache results for 5 minutes before trying again
+stream tweets using keywords in mySQL
 ```bash
 php index.php findtweets stream
 ```
-stream tweets using keywords in mySQL
 #### Example controller (controllers/findtweets.php)
 ```php
 <?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
