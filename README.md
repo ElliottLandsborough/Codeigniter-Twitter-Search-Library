@@ -5,7 +5,7 @@ Search for certain tweets using keywords specified in a mysql database using the
 * curl
 * memcache/memcached (optional for caching)
 * twitter account (optional for streaming api)
-* [a Codeigniter-TwitterOAuth]https://github.com/MunGell/Codeigniter-TwitterOAuth for searching v1.1 api
+* [Codeigniter-TwitterOAuth](https://github.com/MunGell/Codeigniter-TwitterOAuth) for searching v1.1 api
 
 ### How it works
 1. Queries the db for specified keywords (can be 'string' or '#string' or '@string')
