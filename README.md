@@ -5,6 +5,7 @@ Search for certain tweets using keywords specified in a mysql database using the
 * curl
 * memcache/memcached (optional for caching)
 * twitter account (optional for streaming api)
+* [a Codeigniter-TwitterOAuth]https://github.com/MunGell/Codeigniter-TwitterOAuth for searching v1.1 api
 
 ### How it works
 1. Queries the db for specified keywords (can be 'string' or '#string' or '@string')
@@ -22,6 +23,10 @@ php /path/to/codeigniter/index.php findtweets search
 same as first example but cache results for 5 minutes before trying again:
 ```bash
 php /path/to/index.php findtweets search 5
+```
+search for tweets in the same way as search() but using api v1.1 endpoints and oauth
+```bash
+php /path/to/index.php findtweets searchone
 ```
 stream tweets using keywords in mySQL
 ```bash
@@ -54,6 +59,12 @@ class Findtweets extends CI_Controller {
     {
         $this->twitterlib->search($cachetime);
     }
+
+    // search for tweets by hashtag using api v1.1
+    public function searchone($cachetime=null)
+    {
+      $this->twitterlib->searchone($cachetime);
+    }
 }
 ?>
 ```
@@ -84,7 +95,15 @@ CREATE TABLE IF NOT EXISTS `tweets` (
 | TWITTER CONFIG
 | -------------------------------------------------------------------
 */
+
+// required only for streaming api
 $config['user'] = 'twitter-username';
 $config['pass'] = 'twitter-password';
+
+// required only for api v1.1 search
+$config['consumer_token']  = 'abcdefghijklmnopqrstuvwxyz';
+$config['consumer_secret'] = 'abcdefghijklmnopqrstuvwxyz';
+$config['access_token']    = 'abcdefghijklmnopqrstuvwxyz';
+$config['access_secret']   = 'abcdefghijklmnopqrstuvwxyz';
 ?>
 ```
