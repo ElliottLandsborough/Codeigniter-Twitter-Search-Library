@@ -170,16 +170,89 @@ class Twitterlib {
 	}
 
 	/**
+	* Search the tweets via search feed on 1.1 api (can be run at the same time as stream).
+	*
+	* Designed to be run though something like nohup, this function loops
+	* continuously and only dies when ma nually closed. A better solution would
+	* be to use something like node to parse the streaming api and save it into
+	* mySQL but this was made for people who absolutely have to use PHP.
+	*
+	*/
+	public function searchone($cachetime=null)
+	{
+		// do oauth
+		$this->CI->load->library('twitteroauth');
+		// get user/pass from config/twitter.php
+        $this->CI->config->load('twitter');
+        $consumer_token = $this->CI->config->item('consumer_token');
+		$consumer_secret = $this->CI->config->item('consumer_secret');
+		$access_token = $this->CI->config->item('access_token');
+		$access_secret = $this->CI->config->item('access_secret');
+		$connection = $this->CI->twitteroauth->create($consumer_token, $consumer_secret, $access_token, $access_secret);
+		$content = $connection->get('account/verify_credentials');
+		if(isset($content->errors))
+		{
+			foreach ($content->errors as $error)
+	    	{
+	    		echo $error->code.' '.$error->message.PHP_EOL;
+	    	}
+	    	die;
+		}
+		else
+		{
+			// if the number of minutes to cache has been set
+			if($cachetime != null)
+			{
+				// load the memcache adapter
+				$this->CI->load->driver('cache', array('adapter' => 'memcached', 'backup' => 'file'));
+			}
+			// if we are not caching or if our cache has run out
+			if( $cachetime == null || ! $content = $this->CI->cache->get('twitter-api-search') )
+			{
+				$query=implode('+OR+',$this->terms);
+				$query_data = array('q' => $query, 'result_type' => 'recent', 'include_entities' => 'true','rpp' => 1,'result_type'=>'mixed');
+				$url = 'https://api.twitter.com/1.1/search/tweets.json';
+				$content=$connection->get($url,$query_data);
+		        // if we want to cache for an amount of time
+		        if($cachetime != null)
+		        {
+		        	// cache the results
+		        	$this->CI->cache->save('twitter-api-search', $content, $cachetime*60);
+		        }
+		    }
+		    // if we have new results
+		    if(isset($content))
+		    {
+		    	if(isset($content->errors))
+				{
+					foreach ($content->errors as $error)
+			    	{
+			    		echo $error->code.' '.$error->message.PHP_EOL;
+			    	}
+			    	die;
+				}
+				if (isset($content->statuses))
+				{
+					foreach ($content->statuses as $tweet)
+					{
+						// process each tweet one at a time
+	       				$this->process($tweet);
+					}
+				}
+		    }
+		}
+	}
+
+	/**
 	* Process the tweet data and record it in mysql.
 	* Input: $data (array - output from api)
 	*/
 	public function process($data=null)
 	{
 		// if the tweet has an id, if the tweet does not already exist in db, if there is at least one hashtag
-		if( isset($data['id_str']) && !$this->exists($data) )
+		if( ( ( is_array($data) && isset($data['id_str']) ) || ( is_object($data) && isset($data->id_str) ) ) && !$this->exists($data) )
 		{
-			$tweetid=$this->save($data);
-			if($tweetid)
+			if($this->save($data))
 			{
 				echo 'Saved a tweet!'.PHP_EOL;
 			}
@@ -193,10 +266,18 @@ class Twitterlib {
     */
     function exists($data=null,$result=false)
     {
-        if(isset($data['id_str']))
+        if( ( is_array($data) && isset($data['id_str']) ) || ( is_object($data) && isset($data->id_str) ) )
         {
             $this->CI->db->select('tweet_id');
-            $this->CI->db->where('tweet_id',$data['id_str']);
+            if(is_array($data))
+            {
+            	$tweet_id=$data['id_str'];
+            }
+            else
+            {
+            	$tweet_id=$data->id_str;
+            }
+            $this->CI->db->where('tweet_id',$tweet_id);
             $query=$this->CI->db->get('tweets',1,0);
             if($query->num_rows()>0)
             {
@@ -215,21 +296,29 @@ class Twitterlib {
     function save($data=null,$result=false)
     {
     	// if we have a tweet with an ID
-        if( is_array($data) && isset($data['id_str']) )
+        if ( (is_array($data) && isset($data['id_str']) ) || ( is_object($data) && isset($data->id_str) ) )
         {
-            if( isset($data['user']['id_str']) )
+            if( is_array($data) && isset($data['user']['id_str']) )
             { // if we are dealing with streaming api
                 $user_id=$data['user']['id_str'];
+                $tweet_id=$data['id_str'];
             }
-            else if ( isset($data['from_user_id_str']) )
+            else if ( is_array($data) && isset($data['from_user_id_str']) )
             { // if we are dealing with search api
                 $user_id=$data['from_user_id_str'];
+                $tweet_id=$data['id_str'];
+            }
+            else if ( is_object($data) && isset($data->user->id_str) )
+            {
+            	$user_id=$data->user->id_str;
+            	$tweet_id=$data->id_str;
+
             }
             // if we have detected a user id in the tweet array
             if( isset($user_id) )
             {
             	// set input
-                $input=array( 'tweet_id' => $data['id_str'] , 'user_id' => $user_id);
+                $input=array( 'tweet_id' =>  $tweet_id, 'user_id' => $user_id);
                 // save tweet in db
                 $result=$this->CI->db->insert('tweets',$input);
             }
