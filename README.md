@@ -24,7 +24,7 @@ same as first example but cache results for 5 minutes before trying again:
 ```bash
 php /path/to/index.php findtweets search 5
 ```
-search for tweets in the same way as search() but using api v1.1 endpoints and oauth
+search for tweets in the same way as search() but using api v1.1 endpoints and oauth:
 ```bash
 php /path/to/index.php findtweets searchone
 ```
